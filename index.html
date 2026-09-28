@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VECTRA — Prototype: Launch Week Crisis</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+:root{
+  --bg:#050505; --panel:#0c0c0c; --ink:#e8e8e8; --border:#f4f4f4; --dim:#7a7a7a;
+  --signal:#39ff88; --warn:#ff5b5b; --amber:#ffcc4d; --blue:#5bc0ff; --gold:#ffd23f;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;background:#000;color:var(--ink);font-family:'VT323',monospace;font-size:18px;overflow:hidden;}
+.pixel-border{border:3px solid var(--border);box-shadow:inset 0 0 0 3px #000,0 0 0 1px #000;}
+button{font-family:'VT323',monospace;cursor:pointer;}
+
+body{
+  background-image:
+    linear-gradient(rgba(57,255,136,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57,255,136,0.035) 1px, transparent 1px);
+  background-size:22px 22px;
+  background-color:#020302;
+}
+.particle-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1;}
+.particle{position:absolute;bottom:-10px;width:3px;height:3px;background:var(--signal);opacity:0.35;border-radius:0;animation:floatUp linear infinite;}
+@keyframes floatUp{
+  0%{ transform:translate(0,0); opacity:0; }
+  10%{ opacity:0.5; }
+  90%{ opacity:0.35; }
+  100%{ transform:translate(var(--drift,10px), -420px); opacity:0; }
+}
+
+#app-container{
+  width:100vw; height:100vh; display:flex; flex-direction:column;
+  padding:10px; background:#000;
+  border:4px solid #2a2a2a; box-shadow:inset 0 0 0 2px #000, inset 0 0 24px rgba(57,255,136,0.06);
+}
+#app-titlebar{
+  flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:8px 0 10px; border-bottom:2px solid #1a1a1a;
+}
+#app-titlebar .brand{ font-family:'Press Start 2P'; font-size:14px; color:var(--signal); letter-spacing:3px; text-shadow:2px 2px 0 #003318; }
+#app-titlebar .brand-sub{ font-family:'VT323'; font-size:14px; color:var(--dim); letter-spacing:2px; }
+#stage{display:flex;flex:1;min-height:0;position:relative;}
+.panel{height:100%;overflow:hidden;display:flex;flex-direction:column;}
+#left{flex:1;min-width:0;background:#000;border-right:3px solid var(--border);position:relative;}
+#right{width:40%;flex-shrink:0;background:#070707;transition:width .15s ease;}
+#recruiterHint{color:var(--dim);font-size:13px;letter-spacing:1px;}
+.panel-header{font-family:'Press Start 2P';font-size:11px;padding:12px 16px;letter-spacing:1px;border-bottom:3px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;position:relative;z-index:5;background:#000;}
+#left .panel-header{color:var(--signal);}
+#right .panel-header{color:var(--blue);}
+.clock{color:var(--dim);font-size:15px;}
+#eyeToggle{background:#000;border:2px solid var(--blue);color:var(--blue);font-size:14px;padding:3px 8px;line-height:1;}
+#eyeToggle.active{background:var(--blue);color:#000;}
+
+#gameArea{position:relative;flex:1;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#gameViewport{position:relative;width:640px;height:480px;flex-shrink:0;background:#000;}
+#game{image-rendering:pixelated;image-rendering:crisp-edges;display:block;width:640px;height:480px;}
+#moveHint{position:absolute;bottom:6px;left:10px;font-size:12px;color:#9aa0a8;background:#000a;padding:3px 8px;z-index:6;}
+
+#assessmentEndedOverlay{position:absolute;inset:0;background:#000;z-index:50;display:none;align-items:center;justify-content:center;padding:30px;text-align:center;}
+#assessmentEndedText{font-family:'Press Start 2P';font-size:14px;color:var(--signal);line-height:2;letter-spacing:1px;}
+
+#locBanner{
+  position:absolute; top:0; left:0; right:0; z-index:8;
+  display:flex; justify-content:space-between; gap:10px;
+  padding:6px 12px; background:linear-gradient(#000d,#0006 80%,transparent);
+  font-family:'Press Start 2P'; font-size:9px; letter-spacing:1px;
+}
+#locBanner .loc{color:var(--signal);}
+#locBanner .obj{color:var(--amber); text-align:right; max-width:60%;}
+
+#spyBanner{
+  position:absolute; top:34px; left:0; right:0; z-index:9;
+  display:none; justify-content:center; padding:4px 0;
+  background:rgba(91,192,255,0.12); border-top:1px solid #5bc0ff55; border-bottom:1px solid #5bc0ff55;
+  font-family:'Press Start 2P'; font-size:9px; color:var(--blue); letter-spacing:1px;
+}
+#spyBanner .dot{ display:inline-block; width:6px;height:6px;border-radius:50%;background:var(--warn); margin-right:6px; animation:pulse 1s infinite; }
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+#bookmarkBtn{
+  position:absolute; right:12px; bottom:36px; z-index:9; display:none;
+  background:#000; border:2px solid var(--gold); color:var(--gold);
+  font-family:'Press Start 2P'; font-size:9px; padding:8px 10px;
+}
+#bookmarkBtn:hover{ background:var(--gold); color:#000; }
+#bookmarkToast{
+  position:absolute; right:12px; bottom:74px; z-index:9; display:none;
+  background:var(--gold); color:#000; font-family:'Press Start 2P'; font-size:9px; padding:6px 10px;
+}
+
+#dlgOverlay{position:absolute;left:0;right:0;bottom:0;display:none;z-index:20;padding:14px;}
+#dlgInner{display:flex;gap:16px;background:#000;border:3px solid var(--border);box-shadow:inset 0 0 0 3px #000,0 0 0 1px #000;padding:20px 22px;min-height:126px;}
+#portraitWrap{width:76px;height:76px;flex-shrink:0;background:var(--panel);border:2px solid #333;image-rendering:pixelated;}
+#portraitCanvas{width:100%;height:100%;image-rendering:pixelated;}
+#dlgText{flex:1;display:flex;flex-direction:column;gap:10px;}
+.speaker{font-family:'Press Start 2P';font-size:11px;color:var(--amber);letter-spacing:1px;}
+#dialogueText{font-size:20px;line-height:1.65;white-space:pre-wrap;min-height:56px;}
+.advance-hint{align-self:flex-end;font-size:12px;color:var(--dim);animation:bob 1s infinite;}
+@keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(4px);}}
+#timerBar{height:7px;background:#000;border:2px solid #333;margin-top:2px;display:none;}
+#timerFill{height:100%;background:var(--warn);width:100%;transition:width .1s linear;}
+#choices{display:flex;flex-direction:column;gap:7px;margin-top:6px;}
+.choice-btn{background:#000;color:var(--ink);text-align:left;padding:9px 12px;font-size:17px;display:flex;gap:9px;align-items:flex-start;opacity:0;transform:translateX(-8px);transition:opacity .2s,transform .2s,background .1s;border:2px solid var(--border);}
+.choice-btn.show{opacity:1;transform:translateX(0);}
+.choice-btn .arrow{color:var(--signal);flex-shrink:0;opacity:0;}
+.choice-btn:hover:not(:disabled){background:#111;}
+.choice-btn:hover:not(:disabled) .arrow{opacity:1;}
+.choice-btn.picked{background:#0e1f14;border-color:var(--signal);}
+.choice-btn.picked .arrow{opacity:1;}
+/* ---- Independent reflection panel (fully separate from the dialogue box — never intercepted by it) ---- */
+#reflectionOverlay{position:absolute;left:0;right:0;bottom:0;display:none;z-index:25;padding:14px;}
+#reflectionInner{display:flex;flex-direction:column;gap:12px;background:#000;border:3px solid var(--amber);box-shadow:inset 0 0 0 3px #000,0 0 0 1px #000;padding:20px 22px;}
+#reflectionPrompt{font-size:19px;line-height:1.55;color:var(--ink);}
+#reflectionInner textarea{background:#000;color:var(--ink);border:2px solid var(--border);font-family:'VT323';font-size:16px;padding:10px;resize:none;height:80px;width:100%;}
+#reflectionInner textarea:focus{outline:none;border-color:var(--amber);}
+#starSubmit{align-self:flex-start;background:#000;color:var(--amber);border:2px solid var(--amber);padding:9px 18px;font-family:'Press Start 2P';font-size:10px;}
+#starSubmit:hover{background:var(--amber);color:#000;}
+
+#charSelect{position:absolute;inset:0;background:#020302;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;}
+#charSelect .brandLine{font-family:'Press Start 2P';font-size:24px;color:var(--signal);letter-spacing:4px;text-align:center;text-shadow:3px 3px 0 #003318;}
+#charSelect .subLine{font-family:'Press Start 2P';font-size:12px;color:var(--ink);letter-spacing:2px;text-align:center;margin-top:2px;}
+.role-card{width:220px;padding:22px;background:var(--panel);text-align:center;border:3px solid var(--border);box-shadow:inset 0 0 0 3px #000,0 0 0 1px #000;cursor:pointer;transition:transform .1s;position:relative;z-index:2;}
+.role-card:hover{transform:translateY(-3px);border-color:var(--signal);}
+.role-card canvas{image-rendering:pixelated;width:88px;height:88px;margin:0 auto;display:block;background:#0f0f0f;border:1px solid #222;}
+.role-card .role-tag{font-family:'Press Start 2P';font-size:13px;margin:16px 0 4px;line-height:1.6;color:var(--signal);}
+.role-card .begin-hint{color:var(--dim);font-size:13px;margin:8px 0 0;letter-spacing:1px;}
+
+#dash{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px;}
+.dash-block{background:var(--panel);padding:12px 14px;}
+.dash-title{font-family:'Press Start 2P';font-size:9px;color:var(--dim);letter-spacing:1px;margin-bottom:10px;}
+.trait-row{display:grid;grid-template-columns:140px 1fr 38px;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;}
+.trait-bar{height:12px;background:#000;border:2px solid #2a2a2a;position:relative;overflow:hidden;}
+.trait-fill{height:100%;background:var(--signal);width:50%;transition:width .4s ease;}
+.trait-fill.warn{background:var(--warn);}
+.trait-val{text-align:right;color:var(--dim);}
+#eventLog{display:flex;flex-direction:column-reverse;gap:5px;max-height:230px;overflow-y:auto;font-size:13px;}
+.log-entry{color:var(--dim);border-left:3px solid #222;padding-left:7px;cursor:pointer;}
+.log-entry:hover{color:var(--ink);}
+.log-entry.bookmarked{border-left-color:var(--gold);color:var(--gold);}
+.log-entry .ts{color:#444;margin-right:5px;}
+.log-entry.node{color:var(--blue);border-left-color:var(--blue);}
+.log-entry.pick{color:var(--signal);border-left-color:var(--signal);}
+.log-entry.flag{color:var(--warn);border-left-color:var(--warn);}
+.log-entry.move{color:#8b8b8b;border-left-color:#333;}
+.log-entry .bmk{float:right;opacity:0.6;}
+#rubricBox{font-size:13px;line-height:1.5;color:var(--dim);}
+#rubricBox table{width:100%;border-collapse:collapse;margin-top:6px;}
+#rubricBox td{padding:3px;border-bottom:1px solid #1c1c1c;vertical-align:top;}
+.row-hit{color:var(--signal);}
+#consistency{font-size:14px;}
+.consist-tag{display:inline-block;padding:2px 7px;font-size:11px;font-family:'Press Start 2P';margin-right:6px;}
+.consist-tag.match{background:var(--signal);color:#000;}
+.consist-tag.gapneg{background:var(--warn);color:#000;}
+.consist-tag.gappos{background:var(--amber);color:#000;}
+.consist-tag.pending{background:#222;color:var(--dim);}
+#finalReport{display:none;}
+.node-summary{border-bottom:1px solid #1c1c1c;padding:8px 0;font-size:13px;}
+.node-summary b{color:var(--ink);}
+#openScoreboard{margin-top:10px;background:#000;color:var(--gold);border:2px solid var(--gold);padding:8px 12px;font-family:'Press Start 2P';font-size:10px;width:100%;}
+#openScoreboard:hover{background:var(--gold);color:#000;}
+
+/* ---- Fruit-Ninja style scoreboard ---- */
+#scoreboardOverlay{position:absolute;inset:0;background:rgba(0,0,0,0.96);z-index:60;display:none;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:30px 20px;}
+.slash{position:absolute;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);width:140%;left:-20%;opacity:0;transform:rotate(-18deg) translateX(-100%);animation:slashMove 0.6s ease-out forwards;}
+@keyframes slashMove{ 0%{opacity:0;transform:rotate(-18deg) translateX(-100%);} 30%{opacity:1;} 100%{opacity:0;transform:rotate(-18deg) translateX(100%);} }
+#sbTitle{font-family:'Press Start 2P';font-size:16px;color:var(--gold);letter-spacing:2px;margin-top:10px;text-shadow:2px 2px 0 #4a3300;}
+#sbScoreWrap{position:relative;margin:18px 0;text-align:center;}
+#sbScore{font-family:'Press Start 2P';font-size:54px;color:var(--signal);text-shadow:3px 3px 0 #003318;}
+#sbGrade{font-family:'Press Start 2P';font-size:22px;color:var(--gold);margin-top:6px;}
+#sbTabs{display:flex;gap:8px;margin:14px 0;}
+.sbTab{background:#000;border:2px solid var(--border);color:var(--ink);font-family:'Press Start 2P';font-size:9px;padding:8px 12px;}
+.sbTab.active{background:var(--signal);color:#000;border-color:var(--signal);}
+.sbPane{display:none;width:100%;max-width:640px;}
+.sbPane.active{display:block;}
+.sb-star-box{background:var(--panel);border:2px solid var(--border);padding:16px;font-size:17px;line-height:1.5;}
+.sb-bmk-item{background:var(--panel);border-left:3px solid var(--gold);padding:8px 12px;margin-bottom:8px;font-size:14px;color:var(--ink);}
+.sb-bmk-item .ts{color:var(--dim);font-size:12px;margin-right:8px;}
+#sbClose{margin-top:20px;background:#000;color:var(--warn);border:2px solid var(--warn);padding:9px 20px;font-family:'Press Start 2P';font-size:10px;}
+#sbClose:hover{background:var(--warn);color:#000;}
+</style>
+</head>
+<body>
+<div id="app-container">
+<div id="app-titlebar"><span class="brand">VECTRA</span><span class="brand-sub">— GAME-BASED ASSESSMENT ENGINE</span></div>
+<div id="stage">
+  <div class="panel" id="left">
+    <div class="panel-header"><span>◆ CANDIDATE VIEW</span><span class="clock" id="clock">FRI 4:10 PM</span></div>
+    <div id="gameArea">
+     <div id="gameViewport">
+      <canvas id="game" width="640" height="480"></canvas>
+      <div id="locBanner"><span class="loc" id="locText">LOCATION: —</span><span class="obj" id="objText">OBJECTIVE: —</span></div>
+      <div id="spyBanner"><span class="dot"></span>RECRUITER VIEW — LIVE FEED (DEMO)</div>
+      <div id="moveHint">WASD / ARROWS to move · SPACE or E to interact</div>
+      <button id="bookmarkBtn">🔖 BOOKMARK THIS MOMENT</button>
+      <div id="bookmarkToast">✓ BOOKMARKED</div>
+
+      <div id="charSelect">
+        <div class="particle-layer" id="selectParticles"></div>
+        <div class="brandLine">VECTRA</div>
+        <div class="subLine">CHOOSE YOUR ROLE</div>
+        <div class="role-card" id="roleCard">
+          <canvas id="roleCanvas" width="32" height="32"></canvas>
+          <div class="role-tag">PROJECT<br>MANAGER</div>
+          <div class="begin-hint">▶ click to begin</div>
+        </div>
+      </div>
+
+      <div id="dlgOverlay">
+        <div id="dlgInner">
+          <div id="portraitWrap"><canvas id="portraitCanvas" width="32" height="32"></canvas></div>
+          <div id="dlgText">
+            <div class="speaker" id="speaker">SYSTEM</div>
+            <div id="dialogueText"></div>
+            <div id="timerBar"><div id="timerFill"></div></div>
+            <div id="choices"></div>
+            <div class="advance-hint" id="advanceHint" style="display:none;">▼ click or press space to continue</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="reflectionOverlay">
+        <div id="reflectionInner">
+          <div class="speaker">REFLECTION</div>
+          <div id="reflectionPrompt">Before you close out the week — walk through what just happened. What was the situation, what did you do, and what was the result?</div>
+          <textarea id="starInput" placeholder="Type your reflection: what did you do, and why?"></textarea>
+          <button id="starSubmit" type="button">SUBMIT REFLECTION</button>
+        </div>
+      </div>
+
+      <div id="scoreboardOverlay">
+        <div id="sbTitle">ASSESSMENT COMPLETE</div>
+        <div id="sbScoreWrap"><div id="sbScore">0</div><div id="sbGrade"></div></div>
+        <div id="sbTabs">
+          <button class="sbTab active" data-tab="breakdown">SCORE BREAKDOWN</button>
+          <button class="sbTab" data-tab="star">STAR ANSWER</button>
+          <button class="sbTab" data-tab="bookmarks">BOOKMARKED ACTIONS</button>
+        </div>
+        <div class="sbPane active" id="paneBreakdown"></div>
+        <div class="sbPane" id="paneStar"></div>
+        <div class="sbPane" id="paneBookmarks"></div>
+        <button id="sbClose">CLOSE</button>
+      </div>
+
+      <div id="assessmentEndedOverlay">
+        <div id="assessmentEndedText">Assessment has ended.<br>Please contact the moderator for further guidance.</div>
+      </div>
+     </div>
+    </div>
+  </div>
+
+  <div class="panel" id="right" style="width:230px;">
+    <div class="panel-header">
+      <span id="recruiterHeaderText" style="display:none;">◆ RECRUITER TELEMETRY</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="recruiterHint">click for recruiter view</span>
+        <button id="eyeToggle" title="Toggle Recruiter Live View (demo)">👁</button>
+        <span class="clock" id="stageLabel" style="display:none;">STAGE 0/5</span>
+      </div>
+    </div>
+    <div id="dash" style="display:none;">
+      <div class="dash-block"><div class="dash-title">TRAIT SCORES (LIVE)</div><div id="traitList"></div></div>
+      <div class="dash-block"><div class="dash-title">RUBRIC — LAST ACTION SCORED</div><div id="rubricBox">Awaiting first decision…</div></div>
+      <div class="dash-block"><div class="dash-title">STAR CONSISTENCY CHECK</div><div id="consistency"><span class="consist-tag pending">PENDING</span>No reflection submitted yet.</div></div>
+      <div class="dash-block" style="flex:1;"><div class="dash-title">EVENT & EXPLORATION LOG <span style="color:var(--dim); font-family:'VT323'; font-size:12px; letter-spacing:0;">(click a line to bookmark)</span></div><div id="eventLog"></div></div>
+      <div class="dash-block" id="finalReport">
+        <div class="dash-title">FINAL REPORT</div>
+        <div id="finalReportBody"></div>
+        <button id="openScoreboard" style="display:none;">🔔 OPEN RECRUITER SCOREBOARD</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+/* =========================================================
+   CANVAS SETUP
+   ========================================================= */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = canvas.width, H = canvas.height;
+
+/* =========================================================
+   PALETTES + PROCEDURAL PIXEL CHARACTER
+   ========================================================= */
+const PALETTES = {
+  pm:      { skin:"#e8b98a", hair:"#1a1a1a", outfit:"#233b5e", outfit2:"#16233a", accent:"#9aa5b1" },
+  dev:     { skin:"#e0ac7a", hair:"#6b4423", outfit:"#3a6b4a", outfit2:"#274d36", accent:"#e0c14c" },
+  analyst: { skin:"#d9a679", hair:"#2b2b2b", outfit:"#5a4a8a", outfit2:"#3d3164", accent:"#8fd0ff" },
+  manager: { skin:"#e8b98a", hair:"#9a9a9a", outfit:"#3a1f1f", outfit2:"#2a1414", accent:"#ff5b5b" },
+  senior:  { skin:"#c98f5e", hair:"#4a4a4a", outfit:"#4a5a3a", outfit2:"#333f28", accent:"#ffb545" },
+  client:  { skin:"#d9a679", hair:"#3a2a1a", outfit:"#2a5a5a", outfit2:"#1c3f3f", accent:"#5bc0ff" },
+};
+
+function drawCharacter(g, cx, cy, dir, walking, tick, pal, opts){
+  opts = opts || {};
+  const bob = walking ? (Math.floor(tick/160)%2===0 ? 0 : -1) : (opts.idleBob ? Math.round(Math.sin(tick/300))*1 : 0);
+  const legOffset = walking ? (Math.floor(tick/160)%2===0 ? 1 : -1) : 0;
+  const top = cy - 22 + bob;
+  const cxr = Math.round(cx);
+
+  g.fillStyle = "rgba(0,0,0,0.35)";
+  g.beginPath();
+  g.ellipse(cxr, cy+1, 7, 2.4, 0, 0, Math.PI*2);
+  g.fill();
+
+  function rect(x,y,w,h,color){ g.fillStyle = color; g.fillRect(Math.round(x), Math.round(y), w, h); }
+
+  rect(cxr-5, top+16, 4, 6+ (legOffset>0?1:0), pal.outfit2);
+  rect(cxr+1, top+16, 4, 6+ (legOffset<0?1:0), pal.outfit2);
+  rect(cxr-5, top+21+(legOffset>0?1:0), 4, 2, "#111");
+  rect(cxr+1, top+21+(legOffset<0?1:0), 4, 2, "#111");
+
+  if(dir === 'down' || dir === 'up'){
+    rect(cxr-6, top+7, 12, 10, pal.outfit);
+    rect(cxr-8, top+8, 2, 8, pal.outfit);
+    rect(cxr+6, top+8, 2, 8, pal.outfit);
+    rect(cxr-8, top+15, 2, 2, pal.skin);
+    rect(cxr+6, top+15, 2, 2, pal.skin);
+    rect(cxr-4, top, 8, 8, pal.skin);
+    if(dir === 'down'){
+      rect(cxr-2, top+3, 1, 1, "#1a1a1a");
+      rect(cxr+1, top+3, 1, 1, "#1a1a1a");
+      rect(cxr-5, top-2, 10, 4, pal.hair);
+      if(opts.style === 'dev') rect(cxr-6, top-1, 2, 4, pal.hair);
+      if(opts.style === 'analyst'){ rect(cxr-4, top+3, 9, 1, "#111"); }
+      rect(cxr-1, top+9, 2, 5, pal.accent);
+    } else {
+      rect(cxr-5, top-2, 10, 8, pal.hair);
+      rect(cxr-4, top+6, 8, 2, pal.skin);
+    }
+  } else {
+    const flip = dir === 'left' ? -1 : 1;
+    rect(cxr-4, top+7, 9, 10, pal.outfit);
+    const armSwing = walking ? (Math.floor(tick/160)%2===0 ? 1 : -1) : 0;
+    rect(cxr + flip*4, top+8+armSwing, 2, 7, pal.outfit);
+    rect(cxr + flip*4, top+15+armSwing, 2, 2, pal.skin);
+    rect(cxr-3, top, 7, 8, pal.skin);
+    rect(cxr + flip*3, top+3, 1, 2, pal.skin);
+    rect(cxr + flip*1, top+3, 1, 1, "#1a1a1a");
+    rect(cxr-4, top-2, 8, 4, pal.hair);
+    rect(cxr - flip*3, top-1, 2, 5, pal.hair);
+    if(opts.style === 'analyst') rect(cxr + flip*2, top+3, 2, 1, "#111");
+  }
+
+  if(opts.frantic){
+    g.strokeStyle = "rgba(255,91,91,0.5)";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(cxr-9, top-3);
+    g.lineTo(cxr-6, top-1);
+    g.stroke();
+  }
+}
+
+const roleCanvas = document.getElementById('roleCanvas');
+(function(){
+  const c = roleCanvas.getContext('2d');
+  c.imageSmoothingEnabled = false;
+  drawCharacter(c, 16, 30, 'down', false, 0, PALETTES.pm, {style:'pm'});
+})();
+
+(function spawnParticles(){
+  const layer = document.getElementById('selectParticles');
+  if(!layer) return;
+  const COUNT = 26;
+  for(let i=0;i<COUNT;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = (Math.random()*100)+'%';
+    p.style.animationDuration = (6+Math.random()*8)+'s';
+    p.style.animationDelay = (Math.random()*8)+'s';
+    p.style.setProperty('--drift', (Math.random()*40-20).toFixed(0)+'px');
+    layer.appendChild(p);
+  }
+})();
+
+/* =========================================================
+   MAP / ROOMS / OBSTACLES
+   ========================================================= */
+const ROOMS = {
+  desk:    { x:24,  y:24,  w:260, h:190, label:"PM DESK",         floor:"#171c14", floor2:"#1c2318" },
+  server:  { x:360, y:24,  w:256, h:190, label:"ENGINEERING POD", floor:"#12141f", floor2:"#171a29" },
+  coffee:  { x:24,  y:270, w:210, h:186, label:"COFFEE STATION",  floor:"#1e160f", floor2:"#241a12" },
+  meeting: { x:360, y:270, w:256, h:186, label:"WAR ROOM",        floor:"#1a0e18", floor2:"#20111e" },
+  main:    { x:270, y:290, w:170, h:100, label:"LAUNCH BOARD",    floor:"#0e161a", floor2:"#121c22" },
+};
+const HALL_FLOOR = "#0c0c0c", HALL_FLOOR2 = "#101010";
+
+const FURNITURE = [
+  { x:70,  y:70,  w:110, h:46, type:'desk', collide:{x:78,y:78,w:94,h:30} },
+  { x:400, y:60,  w:36,  h:130,type:'rack', collide:{x:404,y:64,w:28,h:122} },
+  { x:470, y:60,  w:36,  h:130,type:'rack', collide:{x:474,y:64,w:28,h:122} },
+  { x:420, y:330, w:150, h:70, type:'table',collide:{x:428,y:338,w:134,h:54} },
+  { x:50,  y:320, w:120, h:44, type:'counter',collide:{x:56,y:326,w:108,h:32} },
+  { x:190, y:330, w:20,  h:24, type:'plant', collide:{x:191,y:340,w:18,h:12} },
+  { x:600, y:300, w:20,  h:24, type:'plant', collide:{x:601,y:310,w:18,h:12} },
+  { x:180, y:300, w:18,  h:26, type:'cooler',collide:{x:181,y:308,w:16,h:16} },
+];
+
+const INTERACTABLES = {
+  deskTerminal: { x:110, y:80, r:58, label:"Project Tracker" },
+  serverPanel:  { x:452,y:90, r:64, label:"Sprint Board" },
+  mainboard:    { x:355,y:335,r:60, label:"Launch Board" },
+};
+
+const player = { x:170, y:200, w:14, h:10, speed:2.6, dir:'down', walking:false, avatar:'pm' };
+const keys = {};
+let inputLocked = true;
+let gameStarted = false;
+let visitedRooms = {};
+
+const manager = { x:590, y:430, dir:'left', visible:false, moving:false, targetX:150, targetY:210, speed:1.7, arrived:false };
+const npc2 = { x:560, y:340, dir:'down', visible:false, kind:null, label:"" };
+
+/* =========================================================
+   ROLE START
+   ========================================================= */
+document.getElementById('roleCard').addEventListener('click', ()=>{
+  document.getElementById('charSelect').style.display = 'none';
+  inputLocked = false;
+  gameStarted = true;
+  logEvent("Role selected: Project Manager.", "node");
+  logEvent("VECTRA scenario initialized: Launch Week Crisis.", "node");
+});
+
+/* =========================================================
+   GAME / STORY STATE
+   ========================================================= */
+let currentStage = 1;
+let flags = {
+  visitedDesk:false, visitedServer:false,
+  stage2Choice:null, stage3Choice:null, stage4Choice:null,
+  stage2Done:false, stage3Done:false, stage4Done:false,
+};
+let decisionShownAt = null;
+let starAnswerText = "";
+
+const TRAITS = {
+  AT:{label:"Ambiguity Tolerance", val:50},
+  EJ:{label:"Escalation Judgment", val:50},
+  CM:{label:"Composure", val:50},
+  OW:{label:"Ownership", val:50},
+  AD:{label:"Adaptability", val:50},
+};
+let history = [];
+
+/* =========================================================
+   RECRUITER SPY / BOOKMARK MODE
+   ========================================================= */
+let spyMode = false;
+let bookmarks = [];
+let eventLogData = [];
+
+document.getElementById('eyeToggle').addEventListener('click', ()=>{
+  spyMode = !spyMode;
+  document.getElementById('eyeToggle').classList.toggle('active', spyMode);
+  document.getElementById('spyBanner').style.display = spyMode ? 'flex' : 'none';
+  document.getElementById('bookmarkBtn').style.display = (spyMode && gameStarted) ? 'block' : 'none';
+
+  // Show/hide the recruiter telemetry dashboard itself, and swap the header hint accordingly
+  document.getElementById('dash').style.display = spyMode ? 'flex' : 'none';
+  document.getElementById('recruiterHeaderText').style.display = spyMode ? 'inline' : 'none';
+  document.getElementById('stageLabel').style.display = spyMode ? 'inline' : 'none';
+  document.getElementById('recruiterHint').style.display = spyMode ? 'none' : 'inline';
+  document.getElementById('right').style.width = spyMode ? '40%' : '230px';
+});
+
+document.getElementById('bookmarkBtn').addEventListener('click', ()=>{
+  const latest = eventLogData[eventLogData.length-1];
+  const entry = {
+    time: new Date().toTimeString().slice(0,8),
+    stage: currentStage,
+    note: latest ? latest.msg : "Live moment (no recent event)",
+  };
+  bookmarks.push(entry);
+  const toast = document.getElementById('bookmarkToast');
+  toast.style.display = 'block';
+  setTimeout(()=>{ toast.style.display='none'; }, 1200);
+});
+
+function toggleLogBookmark(id){
+  const item = eventLogData.find(e=>e.id===id);
+  if(!item) return;
+  item.bookmarked = !item.bookmarked;
+  if(item.bookmarked){
+    bookmarks.push({time:item.time, stage:currentStage, note:item.msg});
+  } else {
+    const idx = bookmarks.findIndex(b=>b.note===item.msg && b.time===item.time);
+    if(idx>=0) bookmarks.splice(idx,1);
+  }
+  renderEventLog();
+}
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+let currentDialogueAdvance = null; // set by typeLines(); lets space/click dismiss the active textbox
+
+window.addEventListener('keydown', e=>{
+  const active = document.activeElement;
+  const typingInField = active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT');
+
+  // Never intercept keystrokes while the player is typing in a text field (e.g. the STAR box) —
+  // this is what was eating spacebar/arrow keys and preventing spaces from being typed.
+  if(typingInField) return;
+
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+
+  // Space bar also advances/dismisses the active dialogue textbox, same as clicking it —
+  // but never while focus/interaction is inside the reflection box itself.
+  if(k === ' ' && document.getElementById('dlgOverlay').style.display === 'block' && currentDialogueAdvance){
+    e.preventDefault();
+    currentDialogueAdvance();
+    return;
+  }
+
+  if(['e',' '].includes(k) && !inputLocked && gameStarted) tryInteract();
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+});
+window.addEventListener('keyup', e=>{
+  const active = document.activeElement;
+  if(active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) return;
+  keys[e.key.toLowerCase()] = false;
+});
+
+/* =========================================================
+   COLLISION
+   ========================================================= */
+function rectsOverlap(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
+function canMoveTo(nx, ny){
+  if(nx < 6 || ny < 6 || nx+player.w > W-6 || ny+player.h > H-6) return false;
+  const box = {x:nx, y:ny, w:player.w, h:player.h};
+  for(const f of FURNITURE){ if(rectsOverlap(box, f.collide)) return false; }
+  return true;
+}
+function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+
+function checkRoomEntry(){
+  const px = player.x+player.w/2, py = player.y+player.h/2;
+  for(const [key, r] of Object.entries(ROOMS)){
+    const inside = px>r.x && px<r.x+r.w && py>r.y && py<r.y+r.h;
+    if(inside && !visitedRooms[key]){
+      visitedRooms[key] = true;
+      logEvent(`Entered ${r.label}`, "move");
+    }
+  }
+}
+
+/* =========================================================
+   MAIN LOOP
+   ========================================================= */
+function update(ts){
+  if(!inputLocked && gameStarted){
+    let nx = player.x, ny = player.y;
+    let moved = false;
+    if(keys['arrowup']||keys['w']){ ny -= player.speed; player.dir='up'; moved=true; }
+    else if(keys['arrowdown']||keys['s']){ ny += player.speed; player.dir='down'; moved=true; }
+    if(keys['arrowleft']||keys['a']){ nx -= player.speed; player.dir='left'; moved=true; }
+    else if(keys['arrowright']||keys['d']){ nx += player.speed; player.dir='right'; moved=true; }
+    player.walking = moved;
+    if(moved){
+      if(canMoveTo(nx, player.y)) player.x = nx;
+      if(canMoveTo(player.x, ny)) player.y = ny;
+      checkRoomEntry();
+    }
+  } else {
+    player.walking = false;
+  }
+
+  if(manager.visible && manager.moving && !manager.arrived){
+    const dx = manager.targetX - manager.x, dy = manager.targetY - manager.y;
+    const d = Math.hypot(dx,dy);
+    manager.dir = Math.abs(dx) > Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down');
+    if(d < 5){
+      manager.arrived = true;
+      manager.moving = false;
+      triggerStage3();
+    } else {
+      manager.x += (dx/d) * manager.speed;
+      manager.y += (dy/d) * manager.speed;
+    }
+  }
+
+  updatePrompt();
+  render(ts);
+  updateBanner();
+  requestAnimationFrame(update);
+}
+
+/* =========================================================
+   INTERACTION TARGETING
+   ========================================================= */
+let nearestTarget = null;
+function updatePrompt(){
+  nearestTarget = null;
+  if(!gameStarted) return;
+  const pcx = player.x+player.w/2, pcy = player.y+player.h/2;
+  const candidates = [];
+  for(const [key,o] of Object.entries(INTERACTABLES)) candidates.push({key, x:o.x, y:o.y, r:o.r, label:o.label});
+  if(npc2.visible) candidates.push({key:'npc2', x:npc2.x, y:npc2.y-10, r:60, label:npc2.label});
+
+  let best=null, bestD=999999;
+  for(const c of candidates){
+    const d = dist(pcx,pcy,c.x,c.y);
+    if(d < c.r && d < bestD){ best=c; bestD=d; }
+  }
+  nearestTarget = best;
+}
+function tryInteract(){
+  if(!nearestTarget) return;
+  if(nearestTarget.key === 'deskTerminal') handleDeskTerminal();
+  else if(nearestTarget.key === 'serverPanel') handleServerPanel();
+  else if(nearestTarget.key === 'mainboard') handleMainboard();
+  else if(nearestTarget.key === 'npc2') handleNpc2();
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+function roomAt(px,py){
+  for(const [key,r] of Object.entries(ROOMS)){
+    if(px>r.x && px<r.x+r.w && py>r.y && py<r.y+r.h) return r;
+  }
+  return null;
+}
+function floorTile(gx,gy){
+  const r = roomAt(gx+8, gy+8);
+  const alt = (((gx/16)|0)+((gy/16)|0))%2===0;
+  if(r) return alt ? r.floor : r.floor2;
+  return alt ? HALL_FLOOR : HALL_FLOOR2;
+}
+
+function drawFloor(){
+  const TILE = 16;
+  for(let gx=0; gx<W; gx+=TILE){
+    for(let gy=0; gy<H; gy+=TILE){
+      ctx.fillStyle = floorTile(gx,gy);
+      ctx.fillRect(gx,gy,TILE,TILE);
+    }
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.03)";
+  [ROOMS.coffee, ROOMS.meeting].forEach(r=>{
+    for(let d=-r.h; d<r.w; d+=10){
+      ctx.beginPath();
+      ctx.moveTo(r.x+d, r.y);
+      ctx.lineTo(r.x+d+r.h, r.y+r.h);
+      ctx.stroke();
+    }
+  });
+  ctx.font = "9px 'Press Start 2P', monospace";
+  for(const r of Object.values(ROOMS)){
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillText(r.label, r.x+6, r.y+14);
+  }
+}
+
+function drawCityWindow(x,y,w,h,tick,seed){
+  ctx.fillStyle = "#0a1420"; ctx.fillRect(x,y,w,h);
+  const grad = ctx.createLinearGradient(x,y,x,y+h);
+  grad.addColorStop(0, "#1a2b4a"); grad.addColorStop(1, "#0a1220");
+  ctx.fillStyle = grad; ctx.fillRect(x+3,y+3,w-6,h-6);
+  ctx.fillStyle = "#050a14";
+  let bx = x+4, i=0;
+  while(bx < x+w-4){
+    const bw = 6 + ((seed+i)%3)*3;
+    const bh = 10 + ((seed+i*3)%14);
+    ctx.fillRect(bx, y+h-6-bh, bw, bh);
+    bx += bw+2; i++;
+  }
+  for(let k=0;k<8;k++){
+    const on = Math.sin(tick/400 + k*2.1 + seed) > 0.6;
+    if(on){
+      ctx.fillStyle = "#ffd76b";
+      ctx.fillRect(x+6+((k*7+seed*3)%(w-14)), y+h-14+((k*3)%8), 2, 2);
+    }
+  }
+  ctx.strokeStyle = "#222"; ctx.lineWidth = 2;
+  ctx.strokeRect(x,y,w,h);
+  ctx.beginPath(); ctx.moveTo(x+w/2,y); ctx.lineTo(x+w/2,y+h); ctx.stroke();
+}
+
+function drawFurniture(tick){
+  for(const f of FURNITURE){
+    if(f.type === 'desk'){
+      ctx.fillStyle = "#5a3d24"; ctx.fillRect(f.x,f.y,f.w,f.h);
+      ctx.fillStyle = "#7a5834"; ctx.fillRect(f.x,f.y,f.w,6);
+      const flick = 0.7 + 0.3*Math.sin(tick/220);
+      ctx.fillStyle = `rgba(80,220,180,${flick})`;
+      ctx.fillRect(f.x+f.w-30, f.y-16, 22, 16);
+      ctx.fillStyle = "#222"; ctx.fillRect(f.x+f.w-32, f.y-2, 26, 4);
+    } else if(f.type === 'rack'){
+      ctx.fillStyle = "#1c1f26"; ctx.fillRect(f.x,f.y,f.w,f.h);
+      ctx.strokeStyle = "#333"; ctx.strokeRect(f.x,f.y,f.w,f.h);
+      const grad = ctx.createRadialGradient(f.x+f.w/2, f.y+f.h/2, 4, f.x+f.w/2, f.y+f.h/2, 60);
+      grad.addColorStop(0, "rgba(60,180,255,0.10)");
+      grad.addColorStop(1, "rgba(60,180,255,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(f.x-40, f.y-40, f.w+80, f.h+80);
+      for(let i=0;i<6;i++){
+        const on = Math.sin(tick/180 + i*1.7 + f.x) > 0;
+        ctx.fillStyle = on ? "#39ff88" : "#1a3a26";
+        ctx.fillRect(f.x+6, f.y+8+i*18, 5, 4);
+        ctx.fillStyle = on ? "#ffcc4d" : "#3a2f1a";
+        ctx.fillRect(f.x+f.w-11, f.y+8+i*18, 5, 4);
+      }
+    } else if(f.type === 'table'){
+      ctx.fillStyle = "#3a2a1c"; ctx.fillRect(f.x,f.y,f.w,f.h);
+      ctx.fillStyle = "#523c26"; ctx.fillRect(f.x+6,f.y+6,f.w-12,f.h-12);
+      ctx.fillStyle = "#222";
+      ctx.fillRect(f.x-10, f.y+10, 8, 14);
+      ctx.fillRect(f.x+f.w+2, f.y+10, 8, 14);
+    } else if(f.type === 'counter'){
+      ctx.fillStyle = "#4a4038"; ctx.fillRect(f.x,f.y,f.w,f.h);
+      ctx.fillStyle = "#222"; ctx.fillRect(f.x+10, f.y-18, 20, 20);
+      const on = Math.sin(tick/300) > 0;
+      ctx.fillStyle = on ? "#ff9944" : "#552b11";
+      ctx.fillRect(f.x+16, f.y-12, 4, 4);
+    } else if(f.type === 'plant'){
+      ctx.fillStyle = "#5a3d24"; ctx.fillRect(f.x, f.y+f.h-8, f.w, 8);
+      ctx.fillStyle = "#2e6b3a"; ctx.beginPath(); ctx.ellipse(f.x+f.w/2, f.y+f.h-10, 10, 12, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#3a8a49"; ctx.beginPath(); ctx.ellipse(f.x+f.w/2-4, f.y+f.h-16, 6, 8, 0, 0, Math.PI*2); ctx.fill();
+    } else if(f.type === 'cooler'){
+      ctx.fillStyle = "#bfe0f0"; ctx.fillRect(f.x,f.y,f.w,f.h);
+      ctx.fillStyle = "#8fd0ff"; ctx.fillRect(f.x+3,f.y+2,f.w-6,10);
+      ctx.fillStyle = "#333"; ctx.fillRect(f.x, f.y-6, f.w, 6);
+    }
+  }
+}
+
+function drawMainboard(tick){
+  const active = flags.stage4Done;
+  const bx = 300, by = 300, bw=110, bh=60;
+  ctx.fillStyle = "#111"; ctx.fillRect(bx-6, by-6, bw+12, bh+12);
+  const glow = active ? (0.5+0.3*Math.sin(tick/200)) : 0.15;
+  ctx.fillStyle = active ? `rgba(57,255,136,${glow})` : `rgba(80,80,80,${glow})`;
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = active ? "#39ff88" : "#444";
+  ctx.strokeRect(bx, by, bw, bh);
+  ctx.strokeStyle = "rgba(0,0,0,0.25)";
+  for(let sy=by; sy<by+bh; sy+=4){ ctx.beginPath(); ctx.moveTo(bx,sy); ctx.lineTo(bx+bw,sy); ctx.stroke(); }
+}
+
+function drawAlertBadge(x,y,tick){
+  if(Date.now()%1000 < 550){
+    ctx.fillStyle = "#ff5b5b";
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = "9px monospace"; ctx.textAlign="center";
+    ctx.fillText("!", x, y+3);
+  }
+}
+
+function drawFloatingIndicator(x,y,text,tick,color){
+  const bob = Math.sin(tick/180)*3;
+  const yy = y + bob;
+  ctx.font = "9px 'Press Start 2P', monospace";
+  const w = ctx.measureText(text).width + 10;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(x-w/2, yy-16, w, 14);
+  ctx.strokeStyle = color || "#39ff88";
+  ctx.strokeRect(x-w/2, yy-16, w, 14);
+  ctx.fillStyle = color || "#39ff88";
+  ctx.textAlign = "center";
+  ctx.fillText(text, x, yy-6);
+}
+
+function drawVignette(){
+  const grad = ctx.createRadialGradient(W/2,H/2, H/3, W/2,H/2, H*0.75);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(1, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+}
+
+function render(ts){
+  ctx.clearRect(0,0,W,H);
+  drawFloor();
+  drawCityWindow(60, 4, 70, 20, ts, 3);
+  drawCityWindow(160, 4, 70, 20, ts, 9);
+  drawCityWindow(400, 4, 70, 20, ts, 15);
+  drawCityWindow(500, 4, 70, 20, ts, 21);
+  drawFurniture(ts);
+  drawMainboard(ts);
+
+  if(!flags.visitedDesk) drawAlertBadge(110, 58, ts);
+
+  if(manager.visible){
+    drawCharacter(ctx, manager.x, manager.y, manager.dir, manager.moving, ts, PALETTES.manager, {style:'suit', idleBob:true, frantic:true});
+  }
+  if(npc2.visible){
+    const pal = npc2.kind==='senior' ? PALETTES.senior : PALETTES.client;
+    drawCharacter(ctx, npc2.x, npc2.y, npc2.dir, false, ts, pal, {style:npc2.kind==='senior'?'dev':'analyst', idleBob:true});
+    if(!flags.stage4Done) drawFloatingIndicator(npc2.x, npc2.y-30, "!", ts, "#ffcc4d");
+  }
+
+  drawCharacter(ctx, player.x+player.w/2, player.y+player.h, player.dir, player.walking, ts, PALETTES[player.avatar], {style:player.avatar});
+
+  if(flags.stage4Done && currentStage===5){
+    drawFloatingIndicator(355, 300, "!", ts, "#39ff88");
+  }
+  if(nearestTarget && !inputLocked){
+    drawFloatingIndicator(nearestTarget.x, nearestTarget.y-34, "[E] "+nearestTarget.label, ts, "#39ff88");
+  }
+
+  drawVignette();
+}
+
+/* =========================================================
+   PORTRAITS
+   ========================================================= */
+const portraitCanvas = document.getElementById('portraitCanvas');
+const pctx = portraitCanvas.getContext('2d');
+pctx.imageSmoothingEnabled = false;
+
+function drawPortrait(speakerKey){
+  pctx.clearRect(0,0,32,32);
+  if(speakerKey === 'YOU'){ drawCharacter(pctx, 16, 30, 'down', false, 0, PALETTES.pm, {style:'pm'}); return; }
+  if(speakerKey === 'MANAGER'){ drawCharacter(pctx, 16, 30, 'down', false, 0, PALETTES.manager, {style:'suit'}); return; }
+  if(speakerKey === 'SENIOR ENGINEER'){ drawCharacter(pctx, 16, 30, 'down', false, 0, PALETTES.senior, {style:'dev'}); return; }
+  if(speakerKey === 'MARKETING LEAD'){ drawCharacter(pctx, 16, 30, 'down', false, 0, PALETTES.client, {style:'analyst'}); return; }
+  pctx.fillStyle = "#111"; pctx.fillRect(4,6,24,18);
+  pctx.fillStyle = "#39ff8899"; pctx.fillRect(7,9,18,12);
+  pctx.fillStyle = "#333"; pctx.fillRect(12,24,8,3);
+  pctx.fillStyle = "#000"; pctx.font="7px monospace";
+  pctx.fillText(">_", 9, 18);
+}
+
+/* =========================================================
+   DIALOGUE / TYPEWRITER (slowed for readability)
+   ========================================================= */
+let typing = false;
+let typewriterTimer = null;
+const TYPE_SPEED_MS = 55;
+
+function openDialogue(speaker, portraitKey){
+  document.getElementById('dlgOverlay').style.display = 'block';
+  document.getElementById('speaker').textContent = speaker;
+  drawPortrait(portraitKey || speaker);
+  inputLocked = true;
+}
+function closeDialogueUI(){
+  document.getElementById('dlgOverlay').style.display = 'none';
+  document.getElementById('choices').innerHTML = '';
+}
+
+function typeLines(lines, onDone){
+  const el = document.getElementById('dialogueText');
+  const hint = document.getElementById('advanceHint');
+  let li = 0;
+  let finished = false; // true once the last line is fully typed and just waiting to be dismissed
+  el.textContent = "";
+  hint.textContent = "▼ click or press space to continue";
+  hint.style.display = "none";
+
+  function typeOne(){
+    const full = lines[li];
+    let ci = 0;
+    typing = true;
+    clearInterval(typewriterTimer);
+    typewriterTimer = setInterval(()=>{
+      el.textContent = full.slice(0,ci) + "▌";
+      ci++;
+      if(ci > full.length){
+        clearInterval(typewriterTimer);
+        el.textContent = full;
+        typing = false;
+        li++;
+        if(li < lines.length){
+          hint.style.display = "block";
+        } else {
+          finished = true;
+          hint.style.display = "block";
+        }
+      }
+    }, TYPE_SPEED_MS);
+  }
+
+  function advance(){
+    if(typing){
+      // reader clicked/pressed space mid-type — snap to the full line instead of closing anything
+      clearInterval(typewriterTimer);
+      el.textContent = lines[li];
+      typing = false;
+      li++;
+      if(li < lines.length){
+        hint.style.display = "block";
+      } else {
+        finished = true;
+        hint.style.display = "block";
+      }
+    } else if(finished){
+      // last line has been fully read — only NOW does the box actually close
+      finished = false;
+      hint.style.display = "none";
+      currentDialogueAdvance = null;
+      onDone();
+    } else if(li < lines.length){
+      typeOne();
+    }
+  }
+
+  document.getElementById('dlgInner').onclick = advance;
+  currentDialogueAdvance = advance;
+  typeOne();
+}
+
+
+function showChoices(choiceDefs, onPick, timed){
+  const box = document.getElementById('choices');
+  box.innerHTML = "";
+  decisionShownAt = performance.now();
+
+  const timerBar = document.getElementById('timerBar');
+  const timerFill = document.getElementById('timerFill');
+  let timerInterval = null;
+  if(timed){
+    timerBar.style.display = 'block';
+    let pct = 100;
+    timerFill.style.width = '100%';
+    timerInterval = setInterval(()=>{
+      pct -= (100/(timed/100));
+      timerFill.style.width = Math.max(0,pct)+'%';
+      if(pct<=0){
+        clearInterval(timerInterval);
+        timerBar.style.display='none';
+        document.querySelectorAll('.choice-btn').forEach(b=>b.disabled=true);
+        onPick(choiceDefs.length-1, true);
+      }
+    }, 100);
+  } else {
+    timerBar.style.display = 'none';
+  }
+
+  choiceDefs.forEach((c,i)=>{
+    const b = document.createElement('button');
+    b.className = "choice-btn";
+    b.innerHTML = `<span class="arrow">&gt;</span><span>${c.text}</span>`;
+    b.addEventListener('click', ()=>{
+      if(timerInterval) clearInterval(timerInterval);
+      timerBar.style.display='none';
+      document.querySelectorAll('.choice-btn').forEach(bb=>bb.disabled=true);
+      b.classList.add('picked');
+      onPick(i, false);
+    });
+    box.appendChild(b);
+    setTimeout(()=>b.classList.add('show'), i*80);
+  });
+}
+
+/* =========================================================
+   TELEMETRY HELPERS
+   ========================================================= */
+function applyDeltas(deltas){
+  if(!deltas) return;
+  Object.keys(deltas).forEach(k=>{ TRAITS[k].val = Math.max(0, Math.min(100, TRAITS[k].val + deltas[k])); });
+  renderTraits();
+}
+function renderTraits(){
+  const list = document.getElementById('traitList');
+  list.innerHTML = "";
+  Object.values(TRAITS).forEach(t=>{
+    const row = document.createElement('div');
+    row.className = "trait-row";
+    const warnClass = t.val < 40 ? "warn":"";
+    row.innerHTML = `<div>${t.label}</div><div class="trait-bar"><div class="trait-fill ${warnClass}" style="width:${t.val}%"></div></div><div class="trait-val">${t.val}</div>`;
+    list.appendChild(row);
+  });
+}
+function updateRubricBox(actionText, rubric, deltas){
+  const box = document.getElementById('rubricBox');
+  box.innerHTML = `<div>Candidate action: <span class="row-hit">${actionText}</span></div>
+    <table>
+      <tr><td style="width:40%;color:var(--dim);">Rubric row applied</td><td>${rubric}</td></tr>
+      <tr><td style="color:var(--dim);">Trait deltas</td><td>${Object.entries(deltas||{}).map(([k,v])=>`${k} ${v>0?'+':''}${v}`).join('  ·  ')||'—'}</td></tr>
+    </table>`;
+}
+let logIdCounter = 0;
+function logEvent(msg, type){
+  const id = ++logIdCounter;
+  const stamp = new Date().toTimeString().slice(0,8);
+  eventLogData.push({id, msg, type, time:stamp, bookmarked:false});
+  renderEventLog();
+}
+function renderEventLog(){
+  const el = document.getElementById('eventLog');
+  el.innerHTML = "";
+  eventLogData.forEach(item=>{
+    const row = document.createElement('div');
+    row.className = "log-entry " + (item.type||"") + (item.bookmarked ? " bookmarked" : "");
+    row.innerHTML = `<span class="ts">[${item.time}]</span>${item.msg}<span class="bmk">${item.bookmarked?'🔖':'☆'}</span>`;
+    row.addEventListener('click', ()=> toggleLogBookmark(item.id));
+    el.appendChild(row);
+  });
+}
+function setStageLabel(n){ document.getElementById('stageLabel').textContent = `STAGE ${n}/5`; }
+
+const OBJECTIVES = {
+  1: "Find out what's actually broken — check your tracker, then the Engineering Pod.",
+  2: "Decide how to handle the scope before the go/no-go conversation.",
+  3: "Your director wants an answer before the steering committee demo.",
+  4: "Follow up on what happened during the demo.",
+  5: "Log the final call at the Launch Board.",
+  complete: "Assessment closed. Review the telemetry report on the right.",
+};
+function updateBanner(){
+  const locEl = document.getElementById('locText');
+  const objEl = document.getElementById('objText');
+  if(!gameStarted){ return; }
+  const r = roomAt(player.x+player.w/2, player.y+player.h/2);
+  locEl.textContent = "LOCATION: " + (r ? r.label : "HALLWAY");
+  const key = flags.stage4Done && currentStage>=5 && document.getElementById('finalReport').style.display==='block' ? 'complete' : currentStage;
+  objEl.textContent = "OBJECTIVE: " + (OBJECTIVES[key] || "");
+}
+
+/* =========================================================
+   STAGE 1 — INVESTIGATE (deeper, slower build-up)
+   ========================================================= */
+function handleDeskTerminal(){
+  if(currentStage === 1 && !flags.visitedDesk){
+    openDialogue("PROJECT TRACKER", "SYSTEM");
+    typeLines([
+      "Your project tracker just flagged something ugly: the payments integration suite failed overnight. 42 test cases, all red.",
+      "Monday's launch has been on the calendar for six weeks. Marketing already scheduled the announcement post.",
+      "You don't know yet if this is a five-minute fix or a five-day fix — and that difference changes everything about what you do next.",
+      "Before you message anyone, you probably want the full picture. The Engineering Pod would know what's actually broken and why."
+    ], ()=>{
+      flags.visitedDesk = true;
+      logEvent("Reviewed the project tracker — 42 failing test cases flagged overnight.", "pick");
+      closeDialogueUI(); inputLocked = false;
+    });
+  } else if(currentStage === 1 && flags.visitedDesk && !flags.visitedServer){
+    openDialogue("YOU", "YOU");
+    typeLines(["Worth getting the real story from Engineering before you decide anything — the tracker alone doesn't tell you why this happened."], ()=>{
+      closeDialogueUI(); inputLocked = false;
+    });
+  } else if(currentStage === 2 && !flags.stage2Done){
+    startStage2();
+  } else if(flags.stage2Done){
+    openDialogue("YOU", "YOU");
+    typeLines(["Nothing new on the tracker for now."], ()=>{ closeDialogueUI(); inputLocked=false; });
+  }
+}
+
+function handleServerPanel(){
+  if(currentStage === 1 && flags.visitedDesk && !flags.visitedServer){
+    openDialogue("ENGINEERING POD", "SYSTEM");
+    typeLines([
+      "The sprint board tells a clearer story: it's not your team's code that broke.",
+      "The third-party payments vendor pushed an API change Thursday night, without warning anyone downstream.",
+      "Half the integration tests fail because they're calling an endpoint that doesn't behave the way it used to. Your engineers already found the new spec — the fix itself is understood, it's just not trivial.",
+      "A proper fix, written and tested carefully, is real work. Not a patch job. That's the part you now have to make a call on, with three days on the clock.",
+      "Take a second. What's actually failing, how bad is it really, and what does Monday actually require?"
+    ], ()=>{
+      flags.visitedServer = true;
+      logEvent("Confirmed root cause: third-party vendor API change, not an internal defect.", "pick");
+      currentStage = 2; setStageLabel(2);
+      closeDialogueUI(); inputLocked = false;
+    });
+  } else if(currentStage === 1 && !flags.visitedDesk){
+    openDialogue("ENGINEERING POD", "SYSTEM");
+    typeLines(["The sprint board's right here, but you haven't even looked at your own tracker yet — might want to start there."], ()=>{
+      closeDialogueUI(); inputLocked=false;
+    });
+  } else {
+    openDialogue("ENGINEERING POD", "SYSTEM");
+    typeLines(["Nothing new on the sprint board for now."], ()=>{
+      closeDialogueUI(); inputLocked=false;
+    });
+  }
+}
+
+/* =========================================================
+   STAGE 2 — SCOPE DECISION (TIMED, weightier)
+   ========================================================= */
+function startStage2(){
+  openDialogue("PROJECT TRACKER", "SYSTEM");
+  typeLines([
+    "You pull the engineering estimate: a proper fix, written and tested the right way, is two full days of focused work.",
+    "Monday morning is three days out. Tight, but maybe workable — if nothing else goes wrong between now and then, which is never a safe bet.",
+    "Marketing is already asking for a final go or no-go on the launch date, and they're asking soon.",
+    "This is your scope call to make before that conversation happens. What do you tell engineering to do?"
+  ], ()=>{
+    const opts = [
+      { text:"Push for the full, proper fix — recommend a short delay if that's what it takes to test it right.",
+        deltas:{AT:8, CM:6, OW:8}, rubric:"Chooses full, tested correction over a compressed timeline — high thoroughness and ownership, accepts the schedule risk that comes with it." },
+      { text:"Scope down — launch without the payments integration this weekend, ship it as a fast-follow, flagged clearly to stakeholders.",
+        deltas:{EJ:6, OW:6, AD:6}, rubric:"Transparent descoping with a clear plan communicated upward — balances speed and integrity." },
+      { text:"Tell engineering to find a fast patch that 'mostly' works so the launch date doesn't move.",
+        deltas:{OW:-8, CM:4}, rubric:"Prioritizes appearing on-schedule over a verified fix — ownership cost, short-term composure gain." },
+    ];
+    showChoices(opts, (i, timedOut)=>{
+      const picked = timedOut ? opts[opts.length-1] : opts[i];
+      const hesitation = ((performance.now()-decisionShownAt)/1000).toFixed(1);
+      applyDeltas(picked.deltas);
+      const label = ['thorough','exclude','quick'][timedOut ? opts.length-1 : i];
+      flags.stage2Choice = timedOut ? 'timeout_quick' : label;
+      history.push({stage:2, text:picked.text, deltas:picked.deltas, rubric:picked.rubric});
+      logEvent(`${timedOut?'[TIMED OUT] ':''}Stage 2 decision (hesitation ${hesitation}s): ${picked.text}`, timedOut?"flag":"pick");
+      updateRubricBox(picked.text, picked.rubric + (timedOut?" Candidate ran out of time and defaulted to the fastest option.":""), picked.deltas);
+      flags.stage2Done = true;
+      currentStage = 3; setStageLabel(3);
+      closeDialogueUI(); inputLocked = false;
+      spawnManager();
+    });
+  });
+}
+
+/* =========================================================
+   STAGE 3 — DIRECTOR PRESSURE
+   ========================================================= */
+function spawnManager(){
+  manager.visible = true;
+  manager.moving = true;
+  manager.arrived = false;
+  logEvent("Director is approaching your desk.", "node");
+}
+function triggerStage3(){
+  openDialogue("DIRECTOR", "MANAGER");
+  typeLines([
+    "Your director walks up fast, laptop still open under one arm.",
+    "\"Steering committee demo's in an hour. I need you to just say we're on track.\"",
+    "\"Don't get into the vendor stuff — it'll spook the room this close to launch. We can deal with the real timeline after, quietly.\""
+  ], ()=>{
+    const opts = [
+      { text:"Refuse — walk the committee through the real risk and the plan you'd recommend.",
+        deltas:{OW:8, CM:6, EJ:6}, rubric:"Holds the line under direct pressure from leadership — high ownership and composure." },
+      { text:"Comply — tell the committee it's on track, exactly as asked.",
+        deltas:{OW:-6, CM:-4}, rubric:"Defers to pressure to suppress a known risk — ownership and composure cost." },
+      { text:"Partial — say the launch is on track for now, but send a written risk note to the committee right after.",
+        deltas:{AD:6, OW:4, CM:4}, rubric:"Finds a middle path — protects the moment in the room while preserving a paper trail." },
+    ];
+    showChoices(opts, (i)=>{
+      const picked = opts[i];
+      const hesitation = ((performance.now()-decisionShownAt)/1000).toFixed(1);
+      applyDeltas(picked.deltas);
+      const label = ['refuse','comply','partial'][i];
+      flags.stage3Choice = label;
+      history.push({stage:3, text:picked.text, deltas:picked.deltas, rubric:picked.rubric});
+      logEvent(`Stage 3 decision (hesitation ${hesitation}s): ${picked.text}`, "pick");
+      updateRubricBox(picked.text, picked.rubric, picked.deltas);
+      flags.stage3Done = true;
+      currentStage = 4; setStageLabel(4);
+      closeDialogueUI(); inputLocked = false;
+      spawnNpc2();
+    });
+  });
+}
+
+/* =========================================================
+   STAGE 4 — CASCADING FALLOUT
+   ========================================================= */
+function spawnNpc2(){
+  const seniorPath = flags.stage2Choice === 'thorough';
+  npc2.kind = seniorPath ? 'senior' : 'client';
+  npc2.label = seniorPath ? "Senior Engineer" : "Marketing Lead";
+  npc2.x = 470; npc2.y = 355; npc2.dir = 'down';
+  npc2.visible = true;
+  logEvent(`${npc2.label} appeared in the War Room.`, "node");
+}
+function handleNpc2(){
+  const speakerName = npc2.label.toUpperCase();
+  if(flags.stage4Done){
+    openDialogue(speakerName, speakerName);
+    typeLines(["Nothing else to add right now."], ()=>{ closeDialogueUI(); inputLocked=false; });
+    return;
+  }
+  openDialogue(speakerName, speakerName);
+  let lines;
+  if(npc2.kind === 'senior'){
+    lines = flags.stage3Choice === 'comply'
+      ? ["\"Hey — my team's been grinding on this fix for two days straight because you said it mattered. So why did the demo just say we're totally fine, no mention of it at all?\"", "They're not upset exactly. Just confused about why the risk vanished the second it reached the room."]
+      : ["\"Appreciate you backing the real fix, by the way. Heard you were straight with the committee too — want a hand putting the technical detail in writing for them?\""];
+  } else {
+    lines = flags.stage3Choice === 'refuse'
+      ? ["\"Your director mentioned something about a vendor risk in the demo. I need to know now if that changes the launch messaging we send out this weekend.\""]
+      : ["\"The demo made it sound like everything's green. I'm about to greenlight the announcement post — nothing's going to blow up on us, right?\""];
+  }
+  typeLines(lines, ()=>{
+    const opts = npc2.kind === 'senior' ? [
+      { text:"Document the vendor risk formally in the shared launch log for the whole team to see.", deltas:{AD:6, OW:6, EJ:4}, rubric:"Chooses visible, auditable documentation over a private conversation." },
+      { text:"Handle it 1:1 with your director only, keep it off the shared log.", deltas:{AD:-4, OW:-2, CM:4}, rubric:"Keeps resolution contained and low-visibility rather than transparent." },
+    ] : [
+      { text:"Be transparent: tell them exactly what's still at risk before they send anything out.", deltas:{OW:8, CM:4, AD:4}, rubric:"Chooses transparency with a downstream stakeholder despite the earlier pressure to stay quiet." },
+      { text:"Reassure them it's fine so the announcement goes out on schedule.", deltas:{OW:-8, CM:2}, rubric:"Compounds the earlier suppression by reassuring marketing inaccurately." },
+    ];
+    showChoices(opts, (i)=>{
+      const picked = opts[i];
+      const hesitation = ((performance.now()-decisionShownAt)/1000).toFixed(1);
+      applyDeltas(picked.deltas);
+      flags.stage4Choice = i===0 ? 'transparent' : 'contained';
+      history.push({stage:4, text:picked.text, deltas:picked.deltas, rubric:picked.rubric});
+      logEvent(`Stage 4 decision (hesitation ${hesitation}s): ${picked.text}`, "pick");
+      updateRubricBox(picked.text, picked.rubric, picked.deltas);
+      flags.stage4Done = true;
+      currentStage = 5; setStageLabel(5);
+      closeDialogueUI(); inputLocked = false;
+      logEvent("Launch Board is now active. Return to log your final call.", "node");
+    });
+  });
+}
+
+/* =========================================================
+   STAGE 5 — LAUNCH BOARD / STAR REFLECTION
+   ========================================================= */
+function handleMainboard(){
+  if(!flags.stage4Done){
+    openDialogue("LAUNCH BOARD", "SYSTEM");
+    typeLines(["The Launch Board is still locked — you're not quite done with this decision yet."], ()=>{
+      closeDialogueUI(); inputLocked=false;
+    });
+    return;
+  }
+  // The final reflection step is its own independent panel — it never opens through the
+  // dialogue box, so nothing about the dialogue-advance system can ever interfere with it.
+  inputLocked = true;
+  document.getElementById('reflectionOverlay').style.display = 'block';
+  document.getElementById('starInput').focus();
+}
+document.getElementById('starSubmit').addEventListener('click', ()=>{
+  const text = document.getElementById('starInput').value.trim();
+  if(!text){
+    document.getElementById('starInput').focus();
+    return;
+  }
+  starAnswerText = text;
+  logEvent("Candidate submitted reflection.", "node");
+  document.getElementById('reflectionOverlay').style.display = 'none';
+  inputLocked = false;
+  runConsistencyCheck(text);
+  buildFinalReport();
+  logEvent("🔔 Recruiter notified: candidate has completed the assessment.", "node");
+
+  // Candidate's view is done — hide everything else in it and show only the end-of-assessment notice.
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('locBanner').style.display = 'none';
+  document.getElementById('spyBanner').style.display = 'none';
+  document.getElementById('moveHint').style.display = 'none';
+  document.getElementById('bookmarkBtn').style.display = 'none';
+  document.getElementById('bookmarkToast').style.display = 'none';
+  document.getElementById('assessmentEndedOverlay').style.display = 'flex';
+});
+
+function runConsistencyCheck(text){
+  const box = document.getElementById('consistency');
+  const narrated = text.toLowerCase();
+  const stage3 = history.find(h=>h.stage===3);
+  if(!stage3){ box.innerHTML = `<span class="consist-tag pending">PENDING</span>No stage-3 decision on record.`; return; }
+  const saysRefused = /refus|flagg|note|transparent|told|disclos|risk/.test(narrated);
+  const saysComplied = /quiet|hid|didn't mention|complied|went along|on track/.test(narrated);
+  let tag="match", label="MATCH", detail="Narration is consistent with the logged director-pressure decision.";
+  if(flags.stage3Choice === 'comply' && saysRefused){
+    tag="gapneg"; label="GAP — FLAG";
+    detail = "Candidate complied with the director's request to downplay the risk (logged), but narration describes flagging or disclosing it. Route to human review.";
+  } else if(flags.stage3Choice !== 'comply' && saysComplied){
+    tag="gappos"; label="GAP — MINOR";
+    detail = "Candidate held the line or found a middle path (logged), but narration undersells it as simple compliance. Worth a look, not a red flag alone.";
+  } else if(!saysRefused && !saysComplied){
+    tag="pending"; label="LOW SPECIFICITY";
+    detail = "Narration doesn't clearly name the director decision. Treat as missing data.";
+  }
+  box.innerHTML = `<span class="consist-tag ${tag}">${label}</span>${detail}`;
+  logEvent(`Consistency check result: ${label}`, tag==="gapneg"?"flag":"node");
+}
+
+function buildFinalReport(){
+  const el = document.getElementById('finalReport');
+  const body = document.getElementById('finalReportBody');
+  el.style.display = 'block';
+  document.getElementById('stageLabel').textContent = "COMPLETE";
+  const rows = history.map(h=>`
+    <div class="node-summary"><b>Stage ${h.stage}:</b> ${h.text}<br><span style="color:var(--dim);">${h.rubric}</span></div>
+  `).join("");
+  const exploreOrder = Object.keys(visitedRooms).map(k=>ROOMS[k].label).join(" → ");
+  body.innerHTML = rows + `
+    <div class="node-summary"><b>Exploration order</b><br><span style="color:var(--dim);">${exploreOrder}</span></div>
+    <div class="node-summary" style="border-bottom:none;"><b>Final trait scores</b><br>${Object.values(TRAITS).map(t=>`${t.label}: ${t.val}`).join(' · ')}</div>
+  `;
+  document.getElementById('openScoreboard').style.display = 'block';
+}
+
+/* =========================================================
+   FRUIT-NINJA STYLE RECRUITER SCOREBOARD
+   ========================================================= */
+document.getElementById('openScoreboard').addEventListener('click', openScoreboard);
+document.getElementById('sbClose').addEventListener('click', ()=>{
+  document.getElementById('scoreboardOverlay').style.display = 'none';
+});
+document.querySelectorAll('.sbTab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.sbTab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.sbPane').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('pane'+tab.dataset.tab.charAt(0).toUpperCase()+tab.dataset.tab.slice(1)).classList.add('active');
+  });
+});
+
+function openScoreboard(){
+  const overlay = document.getElementById('scoreboardOverlay');
+  overlay.style.display = 'flex';
+  overlay.querySelectorAll('.slash').forEach(s=>s.remove());
+  for(let i=0;i<4;i++){
+    const s = document.createElement('div');
+    s.className = 'slash';
+    s.style.top = (20+i*15)+'%';
+    s.style.animationDelay = (i*0.12)+'s';
+    overlay.appendChild(s);
+  }
+
+  const composite = Math.round(Object.values(TRAITS).reduce((a,t)=>a+t.val,0)/Object.values(TRAITS).length);
+  let grade = 'D';
+  if(composite>=80) grade='S';
+  else if(composite>=65) grade='A';
+  else if(composite>=50) grade='B';
+  else if(composite>=35) grade='C';
+
+  const scoreEl = document.getElementById('sbScore');
+  let n = 0;
+  const step = Math.max(1, Math.round(composite/40));
+  clearInterval(window.__sbAnim);
+  window.__sbAnim = setInterval(()=>{
+    n += step;
+    if(n >= composite){ n = composite; clearInterval(window.__sbAnim); document.getElementById('sbGrade').textContent = "RANK: " + grade; }
+    scoreEl.textContent = n;
+  }, 20);
+
+  document.getElementById('paneBreakdown').innerHTML = Object.values(TRAITS).map(t=>`
+    <div class="trait-row" style="grid-template-columns:180px 1fr 44px;">
+      <div>${t.label}</div>
+      <div class="trait-bar"><div class="trait-fill ${t.val<40?'warn':''}" style="width:${t.val}%"></div></div>
+      <div class="trait-val">${t.val}</div>
+    </div>
+  `).join("") + `<div style="margin-top:14px; font-size:13px; color:var(--dim);">Composite score is the average of the five tracked traits across all logged decisions.</div>`;
+
+  document.getElementById('paneStar').innerHTML = starAnswerText
+    ? `<div class="sb-star-box">${starAnswerText.replace(/</g,'&lt;')}</div>`
+    : `<div class="sb-star-box" style="color:var(--dim);">No STAR reflection submitted.</div>`;
+
+  document.getElementById('paneBookmarks').innerHTML = bookmarks.length
+    ? bookmarks.map(b=>`<div class="sb-bmk-item"><span class="ts">[${b.time}] Stage ${b.stage}</span>${b.note}</div>`).join("")
+    : `<div style="color:var(--dim); font-size:14px;">No actions were bookmarked during this session.</div>`;
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+function updateClock(){
+  const d = new Date();
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if(h === 0) h = 12;
+  const m = String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${days[d.getDay()]} ${h}:${m} ${ampm}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+renderTraits();
+setStageLabel(1);
+requestAnimationFrame(update);
+</script>
+</body>
+</html>
