@@ -385,7 +385,7 @@ const ROOMS = {
   desk:    { x:24,  y:24,  w:260, h:190, label:"PM DESK",         floor:"#171c14", floor2:"#1c2318" },
   server:  { x:360, y:24,  w:256, h:190, label:"ENGINEERING POD", floor:"#12141f", floor2:"#171a29" },
   coffee:  { x:24,  y:270, w:210, h:186, label:"COFFEE STATION",  floor:"#1e160f", floor2:"#241a12" },
-  meeting: { x:360, y:270, w:256, h:186, label:"WAR ROOM",        floor:"#1a0e18", floor2:"#20111e" },
+  meeting: { x:360, y:270, w:256, h:186, label:"MEETING ROOM",        floor:"#1a0e18", floor2:"#20111e" },
   main:    { x:270, y:290, w:170, h:100, label:"LAUNCH BOARD",    floor:"#0e161a", floor2:"#121c22" },
 };
 const HALL_FLOOR = "#0c0c0c", HALL_FLOOR2 = "#101010";
@@ -1161,7 +1161,7 @@ function spawnNpc2(){
   npc2.label = seniorPath ? "Senior Engineer" : "Marketing Lead";
   npc2.x = 470; npc2.y = 355; npc2.dir = 'down';
   npc2.visible = true;
-  logEvent(`${npc2.label} appeared in the War Room.`, "node");
+  logEvent(`${npc2.label} appeared in the Meeting Room.`, "node");
 }
 function handleNpc2(){
   const speakerName = npc2.label.toUpperCase();
