@@ -2,7 +2,8 @@
 
 A game-based recruitment assessment prototype. Instead of a set of unrelated mini-games, the candidate plays through one continuous, job-realistic scenario, and every score can be traced back to a specific decision.
 
-![Gameplay](docs/screenshots/gameplay.png)
+![Gameplay IMG-1](docs/screenshots/gameplay 1.png)
+![Gameplay IMG-2](docs/screenshots/gameplay 2.png)
 
 ## The problem
 
@@ -23,7 +24,8 @@ The candidate plays a Project Manager during a launch-week crisis (a vendor API 
 - **Written reflection.** At the end, candidates describe what they did in their own words, and the system checks that account against their logged behavior.
 - **Recruiter view.** A toggle reveals a live telemetry panel with trait scores, an event log, hesitation times, and bookmarking, and a scoreboard once the candidate finishes.
 
-![Recruiter dashboard](docs/screenshots/recruiter-dashboard.png)
+![Recruiter dashboard](docs/screenshots/recruiter view 1.png)
+![Recruiter dashboard](docs/screenshots/recruiter view 2.png)
 
 ## Run it
 
