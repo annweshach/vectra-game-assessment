@@ -23,7 +23,7 @@ The candidate plays a Project Manager during a launch-week crisis (a vendor API 
 - **Written reflection.** At the end, candidates describe what they did in their own words, and the system checks that account against their logged behavior.
 - **Recruiter view.** A toggle reveals a live telemetry panel with trait scores, an event log, hesitation times, and bookmarking, and a scoreboard once the candidate finishes.
 
-![Recruiter dashboard](docs/screenshots/recruiter view 1.png) ![Recruiter dashboard](docs/screenshots/recruiter view 2.png)
+![Recruiter dashboard](docs/screenshots/recruiter%20view%201.png) ![Recruiter dashboard](docs/screenshots/recruiter%20view%202.png)
 
 ## Run it
 
