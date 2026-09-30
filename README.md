@@ -2,7 +2,7 @@
 
 A game-based recruitment assessment prototype. Instead of a set of unrelated mini-games, the candidate plays through one continuous, job-realistic scenario, and every score can be traced back to a specific decision.
 
-![Gameplay IMG-1](docs/screenshots/gameplay 1.png) ![Gameplay IMG-2](docs/screenshots/gameplay 2.png)
+![Gameplay IMG-1](docs/screenshots/gameplay%201.png) ![Gameplay IMG-2](docs/screenshots/gameplay%202.png)
 
 ## The problem
 
